@@ -10,7 +10,7 @@ Remove a User with `id`.
 
 | http status | description |
 | - | - |
-| 204 No Content | the request succeeded and the user was created |
+| 204 No Content | the request succeeded and the user was deleted |
 | 404 Not Found | the request succeeded but returned no data |
 
 # GET /users
@@ -94,15 +94,4 @@ Modify an existing User.
 | http status | description |
 | - | - |
 | 204 No Content | the request succeeded and the user was created |
-| 400 Bad Request | the request failed because something in the request body was malformed |
-
-
-
-## Return Values
-
-### Status Codes
-
-| http status | description |
-| - | - |
-| 201 Created | the request succeeded and the user was created |
 | 400 Bad Request | the request failed because something in the request body was malformed |
