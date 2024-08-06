@@ -25,3 +25,13 @@ Add a new User.
     "password": "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
 }
 ```
+
+## Return Values
+
+### Status Codes
+
+| http status | description |
+| - | - |
+| 201 Created | the request succeeded and the user was created |
+| 400 Bad Request | the request failed because something in the request body was malformed |
+
