@@ -6,7 +6,250 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+
+	"github.com/google/uuid"
 )
+
+/*
+TestAddedStatusUsersGet: Given I have created Users when I call the
+GET method then the HTTP status code will be 200 OK.
+*/
+func TestAddedStatusUsersGet(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	data := map[string]string{
+		"country":    "UK",
+		"email":      "alice@bob.com",
+		"first_name": "Alice",
+		"last_name":  "Bob",
+		"nickname":   "AB123",
+		"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+	}
+
+	req_body, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	post, err := http.NewRequest("POST", "/users", bytes.NewReader(req_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	us.ServeHTTP(httptest.NewRecorder(), post)
+
+	get, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, get)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", resp.StatusCode, http.StatusBadRequest)
+	}
+}
+
+/*
+TestEmptyStatusUsersGet: Given I have created no Users when I call
+the GET method then the HTTP status code will be 204 No Content.
+*/
+func TestEmptyStatusUsersGet(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	req, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", resp.StatusCode, http.StatusNoContent)
+	}
+}
+
+/*
+TestMultiUsersGet: Given I have created multiple Users when I call
+the GET method then the Users I have created will return with the
+following fields populated: created_at, country, email, first_name,
+last_name, nickname, password and updated_at with the values I
+created them with and the types/formats specified in
+./docs/endpoints/users/SCHEMA.md
+*/
+func TestMultiUsersGet(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	data := map[string](map[string]string){
+		"rob": {
+			"country":    "Canada/Australia",
+			"email":      "rob@bob.com",
+			"first_name": "Rob",
+			"last_name":  "Pike",
+			"nickname":   "rob",
+			"password":   "f9c33006f81d188494d2b108a7977ec2710d9fe6c7d33b1b01792eac812d5069",
+		},
+		"ken": {
+			"country":    "USA",
+			"email":      "ken@bob.com",
+			"first_name": "Ken",
+			"last_name":  "Thompson",
+			"nickname":   "ken",
+			"password":   "b3bb4cd67f11e1f6350a5792c8a0f91c2e7920ab93ccd7e964d97d79ad9f8270",
+		},
+		"griesemer": {
+			"country":    "Switzerland",
+			"email":      "robert@bob.com",
+			"first_name": "Robert",
+			"last_name":  "Griesemer",
+			"nickname":   "griesemer",
+			"password":   "cb3a8f635e2afa535e2597817cffc0a6aae7698bf63f5d2b3e396de2a6cfb743",
+		},
+	}
+
+	for _, datum := range data {
+		req_body, err := json.Marshal(datum)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		post, err := http.NewRequest("POST", "/users", bytes.NewReader(req_body))
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		us.ServeHTTP(httptest.NewRecorder(), post)
+	}
+
+	get, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, get)
+
+	resp_body := []map[string]string{}
+
+	err = json.NewDecoder(w.Body).Decode(&resp_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	user := resp_body[0]
+
+	for _, got_user := range resp_body {
+		posted_user := data[got_user["nickname"]]
+
+		for key, expected := range posted_user {
+			got := got_user[key]
+
+			if expected != got {
+				t.Fatalf("Expected attribute %q to be %q but got %q", key, expected, got)
+			}
+
+			for _, key := range []string{"created_at", "updated_at"} {
+				_, err = time.Parse(DtLayout, user[key])
+				if err != nil {
+					t.Fatalf("Expected attribute %q to be in correct layout but got %q instead", key, user[key])
+				}
+			}
+
+			err = uuid.Validate(user["id"])
+			if err != nil {
+				t.Fatalf("Expected 'id' to be a uuid but %q", err.Error())
+			}
+		}
+	}
+}
+
+/*
+TestSingleUsersGet: Given I have created a User when I call the GET
+method then the User I have created will return with the following
+fields populated: created_at, country, email, first_name, last_name,
+nickname, password and updated_at with the values I created them with
+and the types/formats specified in ./docs/endpoints/users/SCHEMA.md
+*/
+func TestSingleUsersGet(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	data := map[string]string{
+		"country":    "UK",
+		"email":      "alice@bob.com",
+		"first_name": "Alice",
+		"last_name":  "Bob",
+		"nickname":   "AB123",
+		"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+	}
+
+	req_body, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	post, err := http.NewRequest("POST", "/users", bytes.NewReader(req_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	us.ServeHTTP(httptest.NewRecorder(), post)
+
+	get, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, get)
+
+	resp_body := []map[string]string{}
+
+	err = json.NewDecoder(w.Body).Decode(&resp_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	user := resp_body[0]
+
+	for key, expected := range data {
+		got := user[key]
+
+		if expected != got {
+			t.Fatalf("Expected attribute %q to be %q but got %q", key, expected, got)
+		}
+	}
+
+	for _, key := range []string{"created_at", "updated_at"} {
+		_, err = time.Parse(DtLayout, user[key])
+		if err != nil {
+			t.Fatalf("Expected attribute %q to be in correct layout but got %q instead", key, user[key])
+		}
+	}
+
+	err = uuid.Validate(user["id"])
+	if err != nil {
+		t.Fatalf("Expected 'id' to be a uuid but %q", err.Error())
+	}
+}
 
 /*
 TestCorrectUsersPost: Given I have rendered a request body with the
