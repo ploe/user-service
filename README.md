@@ -1,3 +1,16 @@
+# TODO
+
+| feature | done? |
+| - | - |
+| **Dockerfile** | ❌ |
+| **DELETE /users** | ❌ |
+| **GET /users** | ❌ |
+| **GET /users filters** | ❌ |
+| **PATCH /users** | ❌ |
+| **POST /users** | ✅ |
+| **GET /healthcheck** | ❌ |
+| **HTTP ListenAndServe** | ❌ |
+
 # How to Start the Application
 
 coming soon

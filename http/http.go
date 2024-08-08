@@ -113,7 +113,9 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 	body, err := json.Marshal(users)
 	if err != nil {
 		log.Printf("/users GET: Unable to Marshal users %q", err.Error())
+
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
