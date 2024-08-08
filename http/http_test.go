@@ -12,6 +12,77 @@ import (
 )
 
 /*
+TestAddedStatusUsersGet: Given I have created Users when I call the
+GET method then the HTTP status code will be 200 OK.
+*/
+func TestAddedStatusUsersGet(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	data := map[string]string{
+		"country":    "UK",
+		"email":      "alice@bob.com",
+		"first_name": "Alice",
+		"last_name":  "Bob",
+		"nickname":   "AB123",
+		"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+	}
+
+	req_body, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	post, err := http.NewRequest("POST", "/users", bytes.NewReader(req_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	us.ServeHTTP(httptest.NewRecorder(), post)
+
+	get, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, get)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", resp.StatusCode, http.StatusBadRequest)
+	}
+}
+
+/*
+TestEmptyStatusUsersGet: Given I have created no Users when I call
+the GET method then the HTTP status code will be 204 No Content.
+*/
+func TestEmptyStatusUsersGet(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	req, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", resp.StatusCode, http.StatusNoContent)
+	}
+}
+
+/*
 TestMultiUsersGet: Given I have created multiple Users when I call
 the GET method then the Users I have created will return with the
 following fields populated: created_at, country, email, first_name,
