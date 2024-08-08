@@ -59,6 +59,7 @@ func (dt *datetime) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+/* Create a new UserService. */
 func NewUserService() (*UserService, error) {
 	us := &UserService{
 		callback: make(chan func()),
@@ -77,6 +78,9 @@ func NewUserService() (*UserService, error) {
 	return us, nil
 }
 
+/*
+Add a new user to the in-memory storage mechanism.
+*/
 func (us *UserService) AddUser(user *user) {
 	us.callback <- func() {
 		us.users[user.ID] = user
@@ -98,6 +102,7 @@ func (us *UserService) GetUsers() []*user {
 	return <-ch
 }
 
+/* Handler method ServeHTTP for UserService. */
 func (us *UserService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
