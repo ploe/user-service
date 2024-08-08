@@ -78,9 +78,7 @@ func NewUserService() (*UserService, error) {
 	return us, nil
 }
 
-/*
-Add a new user to the in-memory storage mechanism.
-*/
+/* Add a new user to the in-memory storage mechanism. */
 func (us *UserService) AddUser(user *user) {
 	us.callback <- func() {
 		us.users[user.ID] = user
@@ -102,6 +100,11 @@ func (us *UserService) GetUsers() []*user {
 	return <-ch
 }
 
+/* Serves HTTP on the requested addr */
+func (us *UserService) ListenAndServe(addr string) error {
+	return http.ListenAndServe(addr, us.mux)
+}
+
 /* Handler method ServeHTTP for UserService. */
 func (us *UserService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -113,11 +116,15 @@ func (us *UserService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
+	sender := r.RemoteAddr
+
+	log.Printf("[%s] GET /users: attempting to get users", sender)
+
 	users := us.GetUsers()
 
 	body, err := json.Marshal(users)
 	if err != nil {
-		log.Printf("/users GET: Unable to Marshal users %q", err.Error())
+		log.Printf("[%s] GET /users: unable to marshal users %q", sender, err.Error())
 
 		w.WriteHeader(http.StatusInternalServerError)
 
@@ -128,17 +135,21 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}
 
+	log.Printf("[%s] GET /users: got users", sender)
 	w.Write(body)
 }
 
 func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
-	id := 0
+	id := uuid.NewString()
+	sender := r.RemoteAddr
+
+	log.Printf("[%s] POST /users: attempting to add %q", sender, id)
 
 	data := map[string]string{}
 
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		log.Printf("/users POST: unable to decode JSON: %s", err.Error())
+		log.Printf("[%s] POST /users: unable to decode JSON on %q: %s", sender, id, err.Error())
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -147,7 +158,7 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 	for _, key := range expected {
 		_, ok := data[key]
 		if !ok {
-			log.Printf("/users POST: unable to create as attribute %q was missing", key)
+			log.Printf("[%s] POST /users: unable to add as attribute %q was missing on %q", sender, id, key)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -159,7 +170,7 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 		Country:   data["country"],
 		Email:     data["email"],
 		FirstName: data["first_name"],
-		ID:        uuid.NewString(),
+		ID:        id,
 		LastName:  data["last_name"],
 		Nickname:  data["nickname"],
 		Password:  data["password"],
@@ -167,7 +178,7 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 	}
 
 	us.AddUser(&user)
-	log.Printf("/users POST: created %q", id)
+	log.Printf("[%s] POST /users: added %q", sender, id)
 
 	w.WriteHeader(http.StatusCreated)
 }
