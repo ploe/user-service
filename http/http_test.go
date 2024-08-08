@@ -45,7 +45,7 @@ func TestSingleUsersGet(t *testing.T) {
 
 	us.ServeHTTP(httptest.NewRecorder(), post)
 
-	get, err := http.NewRequest("get", "/users", nil)
+	get, err := http.NewRequest("GET", "/users", nil)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -71,7 +71,7 @@ func TestSingleUsersGet(t *testing.T) {
 	}
 
 	for _, key := range []string{"created_at", "updated_at"} {
-		_, err = time.Parse("2006-01-02T15:04.05Z", user[key])
+		_, err = time.Parse(DtLayout, user[key])
 		if err != nil {
 			t.Fatalf("Expected attribute %q to be in correct layout but got %q instead", key, user[key])
 		}
