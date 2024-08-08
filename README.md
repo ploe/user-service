@@ -4,7 +4,7 @@
 | - | - |
 | **Dockerfile** | ❌ |
 | **DELETE /users** | ❌ |
-| **GET /users** | ❌ |
+| **GET /users** | ✅ |
 | **GET /users filters** | ❌ |
 | **PATCH /users** | ❌ |
 | **POST /users** | ✅ |
@@ -21,7 +21,7 @@ coming soon
 
 If a task is planned properly you've already done the work towards documenting it.
 
-So my first step was planning/designing the interface in [the docs for /users](./docs/endpoints/users.md)
+So my first step was planning/designing the interface in [the docs for the endpoint /users](./docs/endpoints/users/README.md)
 
 ## HTTP over gRPC
 
@@ -50,6 +50,16 @@ In the interest of breaking this work up in to smaller tasks I've used the GitHu
 This is a common way of working in shops I've worked in and how I prefer to work.
 
 Each feature/enhancement will be given `Acceptance Criteria` so that we can identify when the work on it has been completed.
+
+## About the in-memory storage mechanism used by **POST** and **GET**
+
+The in-memory storage mechanism is a `map` of `users`. To prevent race conditions an anonymous `goroutine` is listening for `callback` functions on a `chan` in an infinite loop.
+
+When this `goroutine` received a `callback` it calls it and then goes to block on the `callback` chan until the next one is sent.
+
+The `UserService` type has two methods push the `callback` functions. They create anonymous `closures` (i.e. they capture the variables of their calling function) and are then pushed on to the `callback` channel.
+
+These two methods are `AddUser` and `GetUsers`.
 
 # Endpoints
 
