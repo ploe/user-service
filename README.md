@@ -9,7 +9,7 @@
 | **PATCH /users** | ❌ |
 | **POST /users** | ✅ |
 | **GET /healthcheck** | ❌ |
-| **HTTP ListenAndServe** | ❌ |
+| **HTTP ListenAndServe** | ✅ |
 
 # How to Start the Application
 
