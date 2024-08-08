@@ -119,9 +119,11 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(body)
+	if len(users) == 0 {
+		w.WriteHeader(http.StatusNoContent)
+	}
 
-	log.Print(string(body))
+	w.Write(body)
 }
 
 func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
