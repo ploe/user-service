@@ -13,6 +13,34 @@ import (
 )
 
 /*
+TestPatchStatusIsNotFound: Given I have not created a User when I
+call the DELETE method then the HTTP status code will be 404 Not
+Found.
+*/
+func TestPatchStatusIsNotFound(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	url := fmt.Sprintf("/users/%s", uuid.NewString())
+
+	req, err := http.NewRequest("PATCH", url, nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+/*
 TestPostAndDeleteStatusIsNoContent: Given I have created a User
 when I call the DELETE method then the HTTP status code will be 204
 No Content.
