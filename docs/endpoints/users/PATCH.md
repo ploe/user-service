@@ -32,5 +32,5 @@ Modify an existing User.
 | http status | description |
 | - | - |
 | 204 No Content | the request succeeded and the user was patched |
-| 400 Bad Request | the request failed because something in the request body was malformed |
 | 404 Not Found | user with id was not found |
+

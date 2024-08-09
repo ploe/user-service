@@ -13,6 +13,71 @@ import (
 )
 
 /*
+TestPostAndPatchStatusIsNoContent: Given I have created a User
+when I call the PATCH method then the HTTP status code will be 204
+No Content.
+*/
+func TestPostAndPatchStatusIsNoContent(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	data := map[string]string{
+		"country":    "UK",
+		"email":      "alice@bob.com",
+		"first_name": "Alice",
+		"last_name":  "Bob",
+		"nickname":   "AB123",
+		"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+	}
+
+	post_body, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	post_req, err := http.NewRequest("POST", "/users", bytes.NewReader(post_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	us.ServeHTTP(httptest.NewRecorder(), post_req)
+
+	get_req, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	get_resp := httptest.NewRecorder()
+	us.ServeHTTP(get_resp, get_req)
+
+	get_body := []map[string]string{}
+
+	err = json.NewDecoder(get_resp.Body).Decode(&get_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	user := get_body[0]
+	url := fmt.Sprintf("/users/%s", user["id"])
+
+	patch_req, err := http.NewRequest("PATCH", url, nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	patch_resp := httptest.NewRecorder()
+	us.ServeHTTP(patch_resp, patch_req)
+
+	status := patch_resp.Result().StatusCode
+
+	if status != http.StatusNoContent {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", status, http.StatusNoContent)
+	}
+}
+
+/*
 TestPatchStatusIsNotFound: Given I have not created a User when I
 call the DELETE method then the HTTP status code will be 404 Not
 Found.
