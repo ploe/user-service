@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -85,6 +86,27 @@ func (us *UserService) AddUser(user *user) {
 	}
 }
 
+/* Delete a user from the in-memory storage mechanism. */
+func (us *UserService) DeleteUser(id string) bool {
+	ch := make(chan bool)
+
+	us.callback <- func() {
+		_, ok := us.users[id]
+
+		if ok {
+			delete(us.users, id)
+		}
+
+		ch <- ok
+	}
+
+	return <-ch
+}
+
+/*
+Get a filtered list of the Users from the in-memory storage
+mechanism.
+*/
 func (us *UserService) GetUsers() []*user {
 	ch := make(chan []*user)
 
@@ -108,11 +130,41 @@ func (us *UserService) ListenAndServe(addr string) error {
 /* Handler method ServeHTTP for UserService. */
 func (us *UserService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case http.MethodPost:
-		us.post(w, r)
+	case http.MethodDelete:
+		us.delete(w, r)
 	case http.MethodGet:
 		us.get(w, r)
+	case http.MethodPost:
+		us.post(w, r)
 	}
+}
+
+func (us *UserService) delete(w http.ResponseWriter, r *http.Request) {
+	sender := r.RemoteAddr
+
+	id := filepath.Base(r.URL.Path)
+
+	log.Printf("[%s] DELETE /users: attempting to delete user %q", sender, id)
+
+	err := uuid.Validate(id)
+	if err != nil {
+		log.Printf("[%s] DELETE /users: %q is not a valid user id", sender, id)
+
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	ok := us.DeleteUser(id)
+	if !ok {
+		log.Printf("[%s] DELETE /users: %q is not a user", sender, id)
+
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	log.Printf("[%s] DELETE /users: deleted %q", sender, id)
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
