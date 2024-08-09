@@ -2,7 +2,7 @@
 
 | feature | done? |
 | - | - |
-| **Dockerfile** | ❌ |
+| **Dockerfile** | ✅ |
 | **DELETE /users** | ❌ |
 | **GET /users** | ✅ |
 | **GET /users filters** | ❌ |
@@ -13,7 +13,43 @@
 
 # How to Start the Application
 
-coming soon
+From the shell use the following commands to download, build and run `user-service`:
+
+```sh
+# download
+git clone https://github.com/ploe/user-service.git
+
+# change working directory
+cd ./user-service
+
+# download modules
+go mod download
+
+# build and run
+go run main.go
+```
+
+# How to Test the Application
+
+From the shell with `user-service` as the working directory use the following command to run the tests and get the coverage:
+
+```sh
+go test -timeout 30s -coverprofile=/tmp/user-service-cover-$(date +%Y%m%d%H%M%S) ./...
+```
+
+The coverage profile can be found at `/tmp/user-service-cover-[TIMESTAMP]` should you need it.
+
+The application will be listening on the default port. (`:8080`)
+
+# How to Run a Docker Container of the Application
+
+From the shell with `user-service` as the working directory use the following command to build the image and run the container:
+
+```sh
+docker run -it -p 8080:8080 $(docker build -q .)
+```
+
+The application will be listening on the default port. (`:8080`)
 
 # Explanation of Choices Taken
 
