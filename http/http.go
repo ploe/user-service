@@ -122,6 +122,19 @@ func (us *UserService) GetUsers() []*user {
 	return <-ch
 }
 
+/* Modify a user from the in-memory storage mechanism. */
+func (us *UserService) ModifyUser(id string, data map[string]string) bool {
+	ch := make(chan bool)
+
+	us.callback <- func() {
+		_, ok := us.users[id]
+
+		ch <- ok
+	}
+
+	return <-ch
+}
+
 /* Serves HTTP on the requested addr */
 func (us *UserService) ListenAndServe(addr string) error {
 	return http.ListenAndServe(addr, us.mux)
@@ -134,6 +147,8 @@ func (us *UserService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		us.delete(w, r)
 	case http.MethodGet:
 		us.get(w, r)
+	case http.MethodPatch:
+		us.patch(w, r)
 	case http.MethodPost:
 		us.post(w, r)
 	}
@@ -189,6 +204,34 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[%s] GET /users: got users", sender)
 	w.Write(body)
+}
+
+func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
+	sender := r.RemoteAddr
+
+	id := filepath.Base(r.URL.Path)
+
+	log.Printf("[%s] PATCH /users: attempting to patch user %q", sender, id)
+
+	err := uuid.Validate(id)
+	if err != nil {
+		log.Printf("[%s] PATCH /users: %q is not a valid user id", sender, id)
+
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	ok := us.ModifyUser(id, map[string]string{})
+	if !ok {
+		log.Printf("[%s] PATCH /users: %q is not a user", sender, id)
+
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	log.Printf("[%s] PATCH /users: patched %q", sender, id)
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
