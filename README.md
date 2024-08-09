@@ -3,7 +3,7 @@
 | feature | done? |
 | - | - |
 | **Dockerfile** | ✅ |
-| **DELETE /users** | ❌ |
+| **DELETE /users** | ✅ |
 | **GET /users** | ✅ |
 | **GET /users filters** | ❌ |
 | **PATCH /users** | ❌ |
