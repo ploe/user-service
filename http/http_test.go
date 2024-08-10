@@ -65,6 +65,8 @@ func TestPatchModifiesUpdatedAt(t *testing.T) {
 
 	debut_updated_at := created_get_body[0]["updated_at"]
 
+	time.Sleep(time.Second * 3)
+
 	id := created_get_body[0]["id"]
 	url := fmt.Sprintf("/users/%s", id)
 

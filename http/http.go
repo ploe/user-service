@@ -145,6 +145,7 @@ func (us *UserService) ModifyUser(id string, data map[string]string) bool {
 			{"password", &(user.Password)},
 		}
 
+		modified := false
 		for _, attribute := range attributes {
 			value, ok := data[attribute.key]
 
@@ -153,6 +154,11 @@ func (us *UserService) ModifyUser(id string, data map[string]string) bool {
 			}
 
 			*(attribute.target) = value
+			modified = true
+		}
+
+		if modified {
+			user.UpdatedAt.tm = time.Now()
 		}
 
 		ch <- true
