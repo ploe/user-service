@@ -178,7 +178,9 @@ func TestPostAndPatchStatusIsNoContent(t *testing.T) {
 	user := get_body[0]
 	url := fmt.Sprintf("/users/%s", user["id"])
 
-	patch_req, err := http.NewRequest("PATCH", url, nil)
+	body := []byte("{}")
+
+	patch_req, err := http.NewRequest("PATCH", url, bytes.NewReader(body))
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -206,7 +208,9 @@ func TestPatchStatusIsNotFound(t *testing.T) {
 
 	url := fmt.Sprintf("/users/%s", uuid.NewString())
 
-	req, err := http.NewRequest("PATCH", url, nil)
+	body := []byte("{}")
+
+	req, err := http.NewRequest("PATCH", url, bytes.NewReader(body))
 	if err != nil {
 		t.Fatal(err.Error())
 	}
