@@ -97,9 +97,6 @@ The `UserService` type has two methods push the `callback` functions. They creat
 
 These two methods are `AddUser` and `GetUsers`.
 
-# Endpoints
-
-* [/users](./docs/endpoints/users.md)
 
 # Issues, Extensions and Improvements
 

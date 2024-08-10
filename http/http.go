@@ -107,13 +107,33 @@ func (us *UserService) DeleteUser(id string) bool {
 Get a filtered list of the Users from the in-memory storage
 mechanism.
 */
-func (us *UserService) GetUsers() []*user {
+func (us *UserService) GetUsers(filters map[string]string) []*user {
 	ch := make(chan []*user)
 
 	us.callback <- func() {
 		users := []*user{}
-		for _, value := range us.users {
-			users = append(users, value)
+		for _, user := range us.users {
+			current := map[string]string{
+				"country":    user.Country,
+				"email":      user.Email,
+				"first_name": user.FirstName,
+				"last_name":  user.LastName,
+				"nickname":   user.Nickname,
+			}
+
+			add := true
+			for key, filter := range filters {
+				if current[key] != filter {
+					add = false
+					break
+				}
+			}
+
+			if !add {
+				continue
+			}
+
+			users = append(users, user)
 		}
 
 		ch <- users
@@ -217,9 +237,24 @@ func (us *UserService) delete(w http.ResponseWriter, r *http.Request) {
 func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 	sender := r.RemoteAddr
 
+	url := r.URL.Query()
+
+	filters := map[string]string{}
+	for _, key := range []string{"country", "email", "first_name", "last_name", "nickname"} {
+		query, ok := url[key]
+
+		if !ok {
+			continue
+		}
+
+		for _, value := range query {
+			filters[key] = value
+		}
+	}
+
 	log.Printf("[%s] GET /users: attempting to get users", sender)
 
-	users := us.GetUsers()
+	users := us.GetUsers(filters)
 
 	body, err := json.Marshal(users)
 	if err != nil {

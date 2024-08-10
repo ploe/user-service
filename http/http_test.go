@@ -13,6 +13,120 @@ import (
 )
 
 /*
+TestGetFiltersFilterUsers: Given I have created multiple Users
+when I call the GET method with any of the following filters:
+country, email,  first_name, last_name and nickname then I will
+only receive Users with their respective attributes set to value
+of the filter.
+*/
+func TestGetFiltersFilterUsers(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	/* create users */
+
+	data := []map[string]string{
+		{
+			"country":    "UK",
+			"email":      "alice@bob.com",
+			"first_name": "Alice",
+			"last_name":  "Bob",
+			"nickname":   "AB123",
+			"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+		},
+		{
+			"country":    "USA",
+			"email":      "robbob@bob.com",
+			"first_name": "Robert",
+			"last_name":  "Bob",
+			"nickname":   "rob",
+			"password":   "d4b7404ebda22784cb763ad4f3441d9df589f4822aadbb3c22c6bf6c6d808cf3",
+		},
+		{
+			"country":    "Canada/Australia",
+			"email":      "rob@bob.com",
+			"first_name": "Rob",
+			"last_name":  "Pike",
+			"nickname":   "rob",
+			"password":   "f9c33006f81d188494d2b108a7977ec2710d9fe6c7d33b1b01792eac812d5069",
+		},
+		{
+			"country":    "USA",
+			"email":      "ken@bob.com",
+			"first_name": "Ken",
+			"last_name":  "Thompson",
+			"nickname":   "ken",
+			"password":   "b3bb4cd67f11e1f6350a5792c8a0f91c2e7920ab93ccd7e964d97d79ad9f8270",
+		},
+		{
+			"country":    "Switzerland",
+			"email":      "robert@bob.com",
+			"first_name": "Robert",
+			"last_name":  "Griesemer",
+			"nickname":   "griesemer",
+			"password":   "cb3a8f635e2afa535e2597817cffc0a6aae7698bf63f5d2b3e396de2a6cfb743",
+		},
+	}
+
+	for _, datum := range data {
+		post_body, err := json.Marshal(datum)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		post_req, err := http.NewRequest("POST", "/users", bytes.NewReader(post_body))
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		us.ServeHTTP(httptest.NewRecorder(), post_req)
+	}
+
+	filters := map[string]string{
+		"country":    "USA",
+		"email":      "robbob@bob.com",
+		"first_name": "Robert",
+		"last_name":  "Bob",
+		"nickname":   "rob",
+	}
+
+	/* get users by filter */
+
+	for key, value := range filters {
+		get, err := http.NewRequest("GET", "/users", nil)
+
+		q := get.URL.Query()
+		q.Add(key, value)
+
+		get.URL.RawQuery = q.Encode()
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		w := httptest.NewRecorder()
+		us.ServeHTTP(w, get)
+
+		resp_body := []map[string]string{}
+
+		err = json.NewDecoder(w.Body).Decode(&resp_body)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		/* does the value we filtered for match the value on the user? */
+
+		for _, user := range resp_body {
+			if user[key] != value {
+				t.Fatalf("expected user to have %q with value %q but got %q", key, value, user[key])
+			}
+		}
+	}
+}
+
+/*
 TestPatchModifiesUpdatedAt: Given I have created a User and modified
 them with PATCH when I call the GET method then the User's created_at
 and updated_at attributes will be no longer be the same.
