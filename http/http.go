@@ -81,14 +81,14 @@ func NewUserService() (*UserService, error) {
 }
 
 /* Add a new user to the in-memory storage mechanism. */
-func (us *UserService) AddUser(user *user) {
+func (us *UserService) addUser(user *user) {
 	us.callback <- func() {
 		us.users[user.ID] = user
 	}
 }
 
 /* Delete a user from the in-memory storage mechanism. */
-func (us *UserService) DeleteUser(id string) bool {
+func (us *UserService) deleteUser(id string) bool {
 	ch := make(chan bool)
 
 	us.callback <- func() {
@@ -108,7 +108,7 @@ func (us *UserService) DeleteUser(id string) bool {
 Get a filtered list of the Users from the in-memory storage
 mechanism.
 */
-func (us *UserService) GetUsers(filters map[string]string) []*user {
+func (us *UserService) getUsers(filters map[string]string) []*user {
 	ch := make(chan []*user)
 
 	us.callback <- func() {
@@ -144,7 +144,7 @@ func (us *UserService) GetUsers(filters map[string]string) []*user {
 }
 
 /* Modify a user from the in-memory storage mechanism. */
-func (us *UserService) ModifyUser(id string, data map[string]string) bool {
+func (us *UserService) modifyUser(id string, data map[string]string) bool {
 	ch := make(chan bool)
 
 	us.callback <- func() {
@@ -222,7 +222,7 @@ func (us *UserService) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok := us.DeleteUser(id)
+	ok := us.deleteUser(id)
 	if !ok {
 		log.Printf("[%s] DELETE /users: %q is not a user", sender, id)
 
@@ -277,7 +277,7 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[%s] GET /users: attempting to get users", sender)
 
-	users := us.GetUsers(filters)
+	users := us.getUsers(filters)
 
 	if limit != 0 {
 		start := (page * limit)
@@ -333,7 +333,7 @@ func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok := us.ModifyUser(id, data)
+	ok := us.modifyUser(id, data)
 	if !ok {
 		log.Printf("[%s] PATCH /users: %q is not a user", sender, id)
 
@@ -384,7 +384,7 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: datetime{tm: now},
 	}
 
-	us.AddUser(&user)
+	us.addUser(&user)
 	log.Printf("[%s] POST /users: added %q", sender, id)
 
 	w.WriteHeader(http.StatusCreated)
