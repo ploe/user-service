@@ -71,7 +71,6 @@ func NewUserService() (*UserService, error) {
 		users:    make(map[string]*user),
 	}
 
-	//	us.mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) }))
 	us.mux.Handle("/healthcheck", us.hc)
 	us.mux.Handle("/users", us)
 
@@ -222,6 +221,7 @@ func (us *UserService) delete(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[%s] DELETE /users: %q is not a valid user id", sender, id)
 
+		us.hc.increment(http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -230,12 +230,14 @@ func (us *UserService) delete(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		log.Printf("[%s] DELETE /users: %q is not a user", sender, id)
 
+		us.hc.increment(http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	log.Printf("[%s] DELETE /users: deleted %q", sender, id)
 
+	us.hc.increment(http.StatusNoContent)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -293,12 +295,14 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[%s] GET /users: unable to marshal users %q", sender, err.Error())
 
+		us.hc.increment(http.StatusInternalServerError)
 		w.WriteHeader(http.StatusInternalServerError)
 
 		return
 	}
 
 	if len(users) == 0 {
+		us.hc.increment(http.StatusNoContent)
 		w.WriteHeader(http.StatusNoContent)
 	}
 
@@ -317,6 +321,7 @@ func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[%s] PATCH /users: %q is not a valid user id", sender, id)
 
+		us.hc.increment(http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -326,6 +331,7 @@ func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		log.Printf("[%s] PATCH /users: no body sent with %q", sender, id)
 
+		us.hc.increment(http.StatusBadRequest)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -333,6 +339,8 @@ func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
 	err = json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Printf("[%s] PATCH /users: unable to decode JSON on %q: %s", sender, id, err.Error())
+
+		us.hc.increment(http.StatusBadRequest)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -341,12 +349,14 @@ func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		log.Printf("[%s] PATCH /users: %q is not a user", sender, id)
 
+		us.hc.increment(http.StatusNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
 	log.Printf("[%s] PATCH /users: patched %q", sender, id)
 
+	us.hc.increment(http.StatusNoContent)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -361,6 +371,8 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Printf("[%s] POST /users: unable to decode JSON on %q: %s", sender, id, err.Error())
+
+		us.hc.increment(http.StatusBadRequest)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -370,6 +382,8 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 		_, ok := data[key]
 		if !ok {
 			log.Printf("[%s] POST /users: unable to add as attribute %q was missing on %q", sender, id, key)
+
+			us.hc.increment(http.StatusBadRequest)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -391,5 +405,6 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 	us.addUser(&user)
 	log.Printf("[%s] POST /users: added %q", sender, id)
 
+	us.hc.increment(http.StatusCreated)
 	w.WriteHeader(http.StatusCreated)
 }
