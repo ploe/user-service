@@ -13,6 +13,76 @@ import (
 )
 
 /*
+TestLimitAndPageUserCount: Given I have a number of Users when I
+specify a limit and the first page then two then the limit of users
+will appear on the first page.
+*/
+func TestLimitAndPageUserCount(t *testing.T) {
+	const (
+		max   = 9000
+		limit = 25
+	)
+
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	/* create users */
+
+	for i := 0; i < max; i++ {
+		data := map[string]string{
+			"country":    "UK",
+			"email":      fmt.Sprintf("user_%d@bob.com", i),
+			"first_name": "User",
+			"last_name":  fmt.Sprintf("%d", i),
+			"nickname":   fmt.Sprintf("user_%d", i),
+			"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+		}
+
+		post_body, err := json.Marshal(data)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		post_req, err := http.NewRequest("POST", "/users", bytes.NewReader(post_body))
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		us.ServeHTTP(httptest.NewRecorder(), post_req)
+	}
+
+	get, err := http.NewRequest("GET", "/users", nil)
+
+	q := get.URL.Query()
+	q.Add("limit", fmt.Sprintf("%d", limit))
+	q.Add("page", "1")
+
+	get.URL.RawQuery = q.Encode()
+
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, get)
+
+	resp_body := []map[string]string{}
+
+	err = json.NewDecoder(w.Body).Decode(&resp_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	got := len(resp_body)
+	if got != limit {
+		t.Fatalf("expected page of limit '%d' but instead got '%d'", limit, got)
+	}
+
+}
+
+/*
 TestGetFiltersFilterUsers: Given I have created multiple Users
 when I call the GET method with any of the following filters:
 country, email,  first_name, last_name and nickname then I will
