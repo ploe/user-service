@@ -122,6 +122,51 @@ func (us *UserService) GetUsers() []*user {
 	return <-ch
 }
 
+/* Modify a user from the in-memory storage mechanism. */
+func (us *UserService) ModifyUser(id string, data map[string]string) bool {
+	ch := make(chan bool)
+
+	us.callback <- func() {
+		user, ok := us.users[id]
+		if !ok {
+			ch <- false
+			return
+		}
+
+		attributes := []struct {
+			key    string
+			target *string
+		}{
+			{"country", &(user.Country)},
+			{"email", &(user.Email)},
+			{"first_name", &(user.FirstName)},
+			{"last_name", &(user.LastName)},
+			{"nickname", &(user.Nickname)},
+			{"password", &(user.Password)},
+		}
+
+		modified := false
+		for _, attribute := range attributes {
+			value, ok := data[attribute.key]
+
+			if !ok {
+				continue
+			}
+
+			*(attribute.target) = value
+			modified = true
+		}
+
+		if modified {
+			user.UpdatedAt.tm = time.Now()
+		}
+
+		ch <- true
+	}
+
+	return <-ch
+}
+
 /* Serves HTTP on the requested addr */
 func (us *UserService) ListenAndServe(addr string) error {
 	return http.ListenAndServe(addr, us.mux)
@@ -134,6 +179,8 @@ func (us *UserService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		us.delete(w, r)
 	case http.MethodGet:
 		us.get(w, r)
+	case http.MethodPatch:
+		us.patch(w, r)
 	case http.MethodPost:
 		us.post(w, r)
 	}
@@ -189,6 +236,50 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[%s] GET /users: got users", sender)
 	w.Write(body)
+}
+
+func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
+	sender := r.RemoteAddr
+
+	id := filepath.Base(r.URL.Path)
+
+	log.Printf("[%s] PATCH /users: attempting to patch user %q", sender, id)
+
+	err := uuid.Validate(id)
+	if err != nil {
+		log.Printf("[%s] PATCH /users: %q is not a valid user id", sender, id)
+
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	data := map[string]string{}
+
+	if r.Body == nil {
+		log.Printf("[%s] PATCH /users: no body sent with %q", sender, id)
+
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		log.Printf("[%s] PATCH /users: unable to decode JSON on %q: %s", sender, id, err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	ok := us.ModifyUser(id, data)
+	if !ok {
+		log.Printf("[%s] PATCH /users: %q is not a user", sender, id)
+
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	log.Printf("[%s] PATCH /users: patched %q", sender, id)
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (us *UserService) post(w http.ResponseWriter, r *http.Request) {

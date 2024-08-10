@@ -13,6 +13,323 @@ import (
 )
 
 /*
+TestPatchModifiesUpdatedAt: Given I have created a User and modified
+them with PATCH when I call the GET method then the User's created_at
+and updated_at attributes will be no longer be the same.
+*/
+func TestPatchModifiesUpdatedAt(t *testing.T) {
+	/* create user */
+
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	debut := map[string]string{
+		"country":    "UK",
+		"email":      "alice@bob.com",
+		"first_name": "Alice",
+		"last_name":  "Bob",
+		"nickname":   "AB123",
+		"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+	}
+
+	post_body, err := json.Marshal(debut)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	post_req, err := http.NewRequest("POST", "/users", bytes.NewReader(post_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	us.ServeHTTP(httptest.NewRecorder(), post_req)
+
+	created_get_req, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	/* after created get the user */
+
+	created_get_resp := httptest.NewRecorder()
+	us.ServeHTTP(created_get_resp, created_get_req)
+
+	created_get_body := []map[string]string{}
+
+	err = json.NewDecoder(created_get_resp.Body).Decode(&created_get_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	debut_updated_at := created_get_body[0]["updated_at"]
+
+	time.Sleep(time.Second * 3)
+
+	id := created_get_body[0]["id"]
+	url := fmt.Sprintf("/users/%s", id)
+
+	finale := map[string]string{
+		"country":    "USA",
+		"email":      "ken@bob.com",
+		"first_name": "Ken",
+		"last_name":  "Thompson",
+		"nickname":   "ken",
+		"password":   "b3bb4cd67f11e1f6350a5792c8a0f91c2e7920ab93ccd7e964d97d79ad9f8270",
+	}
+
+	patch_body, err := json.Marshal(&finale)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	patch_req, err := http.NewRequest("PATCH", url, bytes.NewReader(patch_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	patch_resp := httptest.NewRecorder()
+	us.ServeHTTP(patch_resp, patch_req)
+
+	/* after patch get users */
+
+	patched_get_req, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	patched_get_resp := httptest.NewRecorder()
+	us.ServeHTTP(patched_get_resp, patched_get_req)
+
+	patched_get_body := []map[string]string{}
+
+	err = json.NewDecoder(patched_get_resp.Body).Decode(&patched_get_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	finale_updated_at := patched_get_body[0]["updated_at"]
+
+	if debut_updated_at == finale_updated_at {
+		t.Fatalf("expected updated_at attribute to be modified but both were %q", debut_updated_at)
+	}
+}
+
+/*
+TestPatchModifiesAttributes: Given I have created a User and
+modified any of the following attributes: country, email, first_name,
+last_name, nickname and password when I call the GET method then the
+modified attributes will be what I updated them to.
+*/
+func TestPatchModifiesAttributes(t *testing.T) {
+	/* create user */
+
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	debut := map[string]string{
+		"country":    "UK",
+		"email":      "alice@bob.com",
+		"first_name": "Alice",
+		"last_name":  "Bob",
+		"nickname":   "AB123",
+		"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+	}
+
+	post_body, err := json.Marshal(debut)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	post_req, err := http.NewRequest("POST", "/users", bytes.NewReader(post_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	us.ServeHTTP(httptest.NewRecorder(), post_req)
+
+	created_get_req, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	/* after created get the user */
+
+	created_get_resp := httptest.NewRecorder()
+	us.ServeHTTP(created_get_resp, created_get_req)
+
+	created_get_body := []map[string]string{}
+
+	err = json.NewDecoder(created_get_resp.Body).Decode(&created_get_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	id := created_get_body[0]["id"]
+	url := fmt.Sprintf("/users/%s", id)
+
+	/* patch each attribute on the user and check if it has updated */
+
+	finale := map[string]string{
+		"country":    "USA",
+		"email":      "ken@bob.com",
+		"first_name": "Ken",
+		"last_name":  "Thompson",
+		"nickname":   "ken",
+		"password":   "b3bb4cd67f11e1f6350a5792c8a0f91c2e7920ab93ccd7e964d97d79ad9f8270",
+	}
+
+	for attribute, stale := range debut {
+		/* patch the user */
+
+		fresh := finale[attribute]
+
+		patch_data := map[string]string{
+			attribute: fresh,
+		}
+
+		patch_body, err := json.Marshal(&patch_data)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		patch_req, err := http.NewRequest("PATCH", url, bytes.NewReader(patch_body))
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		patch_resp := httptest.NewRecorder()
+		us.ServeHTTP(patch_resp, patch_req)
+
+		/* after patch get users */
+
+		patched_get_req, err := http.NewRequest("GET", "/users", nil)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		patched_get_resp := httptest.NewRecorder()
+		us.ServeHTTP(patched_get_resp, patched_get_req)
+
+		patched_get_body := []map[string]string{}
+
+		err = json.NewDecoder(patched_get_resp.Body).Decode(&patched_get_body)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+
+		/* has the user been modified like we expect? */
+
+		current := patched_get_body[0][attribute]
+
+		if (current == stale) || (current != fresh) {
+			t.Fatalf("expected attribute %q to be modified from %q to %q but got %q", attribute, stale, fresh, current)
+		}
+	}
+
+}
+
+/*
+TestPostAndPatchStatusIsNoContent: Given I have created a User
+when I call the PATCH method then the HTTP status code will be 204
+No Content.
+*/
+func TestPostAndPatchStatusIsNoContent(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	data := map[string]string{
+		"country":    "UK",
+		"email":      "alice@bob.com",
+		"first_name": "Alice",
+		"last_name":  "Bob",
+		"nickname":   "AB123",
+		"password":   "f6b7e19e0d867de6c0391879050e8297165728d89d7c4e9e8839972b356c4d9d",
+	}
+
+	post_body, err := json.Marshal(data)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	post_req, err := http.NewRequest("POST", "/users", bytes.NewReader(post_body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	us.ServeHTTP(httptest.NewRecorder(), post_req)
+
+	get_req, err := http.NewRequest("GET", "/users", nil)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	get_resp := httptest.NewRecorder()
+	us.ServeHTTP(get_resp, get_req)
+
+	get_body := []map[string]string{}
+
+	err = json.NewDecoder(get_resp.Body).Decode(&get_body)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	user := get_body[0]
+	url := fmt.Sprintf("/users/%s", user["id"])
+
+	body := []byte("{}")
+
+	patch_req, err := http.NewRequest("PATCH", url, bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	patch_resp := httptest.NewRecorder()
+	us.ServeHTTP(patch_resp, patch_req)
+
+	status := patch_resp.Result().StatusCode
+
+	if status != http.StatusNoContent {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", status, http.StatusNoContent)
+	}
+}
+
+/*
+TestPatchStatusIsNotFound: Given I have not created a User when I
+call the DELETE method then the HTTP status code will be 404 Not
+Found.
+*/
+func TestPatchStatusIsNotFound(t *testing.T) {
+	us, err := NewUserService()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	url := fmt.Sprintf("/users/%s", uuid.NewString())
+
+	body := []byte("{}")
+
+	req, err := http.NewRequest("PATCH", url, bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	w := httptest.NewRecorder()
+	us.ServeHTTP(w, req)
+
+	resp := w.Result()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("Unexpected error code. Got %d, %d expected.", resp.StatusCode, http.StatusNotFound)
+	}
+}
+
+/*
 TestPostAndDeleteStatusIsNoContent: Given I have created a User
 when I call the DELETE method then the HTTP status code will be 204
 No Content.

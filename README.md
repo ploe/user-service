@@ -6,7 +6,7 @@
 | **DELETE /users** | ✅ |
 | **GET /users** | ✅ |
 | **GET /users filters** | ❌ |
-| **PATCH /users** | ❌ |
+| **PATCH /users** | ✅ |
 | **POST /users** | ✅ |
 | **GET /healthcheck** | ❌ |
 | **HTTP ListenAndServe** | ✅ |
