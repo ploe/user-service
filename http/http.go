@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -80,14 +81,14 @@ func NewUserService() (*UserService, error) {
 }
 
 /* Add a new user to the in-memory storage mechanism. */
-func (us *UserService) AddUser(user *user) {
+func (us *UserService) addUser(user *user) {
 	us.callback <- func() {
 		us.users[user.ID] = user
 	}
 }
 
 /* Delete a user from the in-memory storage mechanism. */
-func (us *UserService) DeleteUser(id string) bool {
+func (us *UserService) deleteUser(id string) bool {
 	ch := make(chan bool)
 
 	us.callback <- func() {
@@ -107,13 +108,33 @@ func (us *UserService) DeleteUser(id string) bool {
 Get a filtered list of the Users from the in-memory storage
 mechanism.
 */
-func (us *UserService) GetUsers() []*user {
+func (us *UserService) getUsers(filters map[string]string) []*user {
 	ch := make(chan []*user)
 
 	us.callback <- func() {
 		users := []*user{}
-		for _, value := range us.users {
-			users = append(users, value)
+		for _, user := range us.users {
+			current := map[string]string{
+				"country":    user.Country,
+				"email":      user.Email,
+				"first_name": user.FirstName,
+				"last_name":  user.LastName,
+				"nickname":   user.Nickname,
+			}
+
+			add := true
+			for key, filter := range filters {
+				if current[key] != filter {
+					add = false
+					break
+				}
+			}
+
+			if !add {
+				continue
+			}
+
+			users = append(users, user)
 		}
 
 		ch <- users
@@ -123,7 +144,7 @@ func (us *UserService) GetUsers() []*user {
 }
 
 /* Modify a user from the in-memory storage mechanism. */
-func (us *UserService) ModifyUser(id string, data map[string]string) bool {
+func (us *UserService) modifyUser(id string, data map[string]string) bool {
 	ch := make(chan bool)
 
 	us.callback <- func() {
@@ -201,7 +222,7 @@ func (us *UserService) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok := us.DeleteUser(id)
+	ok := us.deleteUser(id)
 	if !ok {
 		log.Printf("[%s] DELETE /users: %q is not a user", sender, id)
 
@@ -217,9 +238,52 @@ func (us *UserService) delete(w http.ResponseWriter, r *http.Request) {
 func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 	sender := r.RemoteAddr
 
+	url := r.URL.Query()
+
+	limit := 0
+	for _, value := range url["limit"] {
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			continue
+		}
+
+		limit = i
+		break
+	}
+
+	page := 0
+	for _, value := range url["page"] {
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			continue
+		}
+
+		page = i
+		break
+	}
+
+	filters := map[string]string{}
+	for _, key := range []string{"country", "email", "first_name", "last_name", "nickname"} {
+		query, ok := url[key]
+
+		if !ok {
+			continue
+		}
+
+		for _, value := range query {
+			filters[key] = value
+		}
+	}
+
 	log.Printf("[%s] GET /users: attempting to get users", sender)
 
-	users := us.GetUsers()
+	users := us.getUsers(filters)
+
+	if limit != 0 {
+		start := (page * limit)
+		end := start + limit
+		users = users[start:end]
+	}
 
 	body, err := json.Marshal(users)
 	if err != nil {
@@ -269,7 +333,7 @@ func (us *UserService) patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok := us.ModifyUser(id, data)
+	ok := us.modifyUser(id, data)
 	if !ok {
 		log.Printf("[%s] PATCH /users: %q is not a user", sender, id)
 
@@ -320,7 +384,7 @@ func (us *UserService) post(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: datetime{tm: now},
 	}
 
-	us.AddUser(&user)
+	us.addUser(&user)
 	log.Printf("[%s] POST /users: added %q", sender, id)
 
 	w.WriteHeader(http.StatusCreated)
