@@ -27,21 +27,21 @@ func TestHealthcheckEqualNumber(t *testing.T) {
 
 	for status, count := range statuses {
 		for i := 0; i < count; i++ {
-			us.healthcheck.increment(status)
+			us.hc.increment(status)
 		}
 	}
 
-	get, err := http.NewRequest("GET", "/users", nil)
+	r, err := http.NewRequest("GET", "/healthcheck", nil)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
 
 	w := httptest.NewRecorder()
-	us.ServeHTTP(w, get)
+	us.hc.ServeHTTP(w, r)
 
-	body := map[string]int{}
+	body := make(map[string]int)
 
-	err = json.NewDecoder(get.Body).Decode(&body)
+	err = json.NewDecoder(w.Body).Decode(&body)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

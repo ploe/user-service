@@ -18,6 +18,7 @@ type datetime struct {
 
 type UserService struct {
 	callback chan func()
+	hc       *healthchecker
 	mux      *http.ServeMux
 	users    map[string]*user
 }
@@ -65,10 +66,13 @@ func (dt *datetime) UnmarshalJSON(b []byte) error {
 func NewUserService() (*UserService, error) {
 	us := &UserService{
 		callback: make(chan func()),
+		hc:       newHealthchecker(),
 		mux:      http.NewServeMux(),
 		users:    make(map[string]*user),
 	}
 
+	//	us.mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) }))
+	us.mux.Handle("/healthcheck", us.hc)
 	us.mux.Handle("/users", us)
 
 	go func() {
