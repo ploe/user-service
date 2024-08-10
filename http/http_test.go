@@ -14,7 +14,7 @@ import (
 
 /*
 TestLimitAndPageUserCount: Given I have a number of Users when I
-specify a limit and the first page then two then the limit of users
+specify a limit and the first page then the limit of users
 will appear on the first page.
 */
 func TestLimitAndPageUserCount(t *testing.T) {

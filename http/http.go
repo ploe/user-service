@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -239,6 +240,28 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 
 	url := r.URL.Query()
 
+	limit := 0
+	for _, value := range url["limit"] {
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			continue
+		}
+
+		limit = i
+		break
+	}
+
+	page := 0
+	for _, value := range url["page"] {
+		i, err := strconv.Atoi(value)
+		if err != nil {
+			continue
+		}
+
+		page = i
+		break
+	}
+
 	filters := map[string]string{}
 	for _, key := range []string{"country", "email", "first_name", "last_name", "nickname"} {
 		query, ok := url[key]
@@ -255,6 +278,12 @@ func (us *UserService) get(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[%s] GET /users: attempting to get users", sender)
 
 	users := us.GetUsers(filters)
+
+	if limit != 0 {
+		start := (page * limit)
+		end := start + limit
+		users = users[start:end]
+	}
 
 	body, err := json.Marshal(users)
 	if err != nil {
